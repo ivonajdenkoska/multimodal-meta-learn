@@ -123,10 +123,9 @@ def main_episodic():
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
 
-    # FEW-shot datasets
     argparser.add_argument('--experiment_id', type=int, default=5000)
     argparser.add_argument('--data_root', type=str, default='real_name_mi')
-    argparser.add_argument('--data_path', type=str, default='real_name_mi')
+    argparser.add_argument('--data_path', type=str, help='the path to datasets', default='')
 
     argparser.add_argument('--clip_model_type', type=str, default="ViT-B/32")
     argparser.add_argument('--epoch', type=int, help='epoch number', default=60000)
