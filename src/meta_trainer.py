@@ -152,7 +152,7 @@ class MetaTrainer(nn.Module):
         model = deepcopy(self.model)
 
         # 1. run the i-th task and compute loss for k=0
-        logits = model(x_spt, y_spt, y_spt_mask, list(model.mapper_net.parameters()), get_pred_tokens=False)
+        logits = model(x_spt, y_spt, y_spt_mask, fast_weights=list(model.mapper_net.parameters()), get_pred_tokens=False)
         loss = F.cross_entropy(logits.reshape(-1, len(model.gpt_tokenizer)), y_spt.flatten(),
                                ignore_index=self.pad_token_id)
         grad = torch.autograd.grad(outputs=loss, inputs=model.mapper_net.parameters())
@@ -161,8 +161,7 @@ class MetaTrainer(nn.Module):
         # this is the loss and accuracy before first update
         with torch.no_grad():
             # [setsz, nway]
-            logits_q, pred_tokens = model(x_qry, y_qry, y_qry_mask, list(model.mapper_net.parameters()),
-                                          is_finetuning=True)
+            logits_q, pred_tokens = model(x_qry, y_qry, y_qry_mask, fast_weights=list(model.mapper_net.parameters()))
             # [setsz]
             correct = torch.eq(pred_tokens, qry_answer).sum().item()
             corrects[0] = corrects[0] + correct
@@ -170,14 +169,14 @@ class MetaTrainer(nn.Module):
         # this is the loss and accuracy after the first update
         with torch.no_grad():
             # [setsz, nway]
-            logits_q, pred_tokens = model(x_qry, y_qry, y_qry_mask, fast_weights, is_finetuning=True)
+            logits_q, pred_tokens = model(x_qry, y_qry, y_qry_mask, fast_weights=fast_weights)
 
             correct = torch.eq(pred_tokens, qry_answer).sum().item()
             corrects[1] = corrects[1] + correct
 
         for k in range(1, self.update_step_test):
             # 1. run the i-th task and compute loss for k=1~K-1
-            logits = model(x_spt, y_spt, y_spt_mask, fast_weights, get_pred_tokens=False)
+            logits = model(x_spt, y_spt, y_spt_mask, fast_weights=fast_weights, get_pred_tokens=False)
             loss = F.cross_entropy(logits.reshape(-1, len(model.gpt_tokenizer)), y_spt.flatten(),
                                    ignore_index=self.pad_token_id)
             # 2. compute grad on theta_pi
@@ -185,8 +184,7 @@ class MetaTrainer(nn.Module):
             # 3. theta_pi = theta_pi - train_lr * grad
             fast_weights = list(map(lambda p: p[1] - self.update_lr * p[0], zip(grad, fast_weights)))
 
-            logits_q, pred_tokens = model(x_qry, y_qry, y_qry_mask, fast_weights, get_pred_tokens=True,
-                                          is_finetuning=True)
+            logits_q, pred_tokens = model(x_qry, y_qry, y_qry_mask, fast_weights=fast_weights, get_pred_tokens=True)
 
             with torch.no_grad():
                 # pred_tokens = self.model.generate_text(logits_q)
