@@ -142,7 +142,7 @@ class MetaTrainer(nn.Module):
 
         return accs, losses_q_
 
-    def finetunning(self, x_spt, y_spt, y_spt_mask, x_qry, y_qry, y_qry_mask, qry_answer, q_img_id):
+    def finetunning(self, x_spt, y_spt, y_spt_mask, x_qry, y_qry, y_qry_mask, qry_answer, qry_img_id):
         querysz = len(x_qry)
 
         corrects = [0 for _ in range(self.update_step_test + 1)]
@@ -195,7 +195,7 @@ class MetaTrainer(nn.Module):
             gt_answer = self.model.gpt_tokenizer.decode(qry_answer[idx], skip_special_tokens=True).strip()
             pred_answer = self.model.gpt_tokenizer.decode(pred_tokens[idx], skip_special_tokens=True).strip()
             write_data_to_txt(self.log_file_path, ("Img: {}, GT answer: {}, Pred. answer: {}\n"
-                                                   .format(q_img_id, gt_answer, pred_answer)))
+                                                   .format(qry_img_id, gt_answer, pred_answer)))
 
         del model
         accs = np.array(corrects) / (querysz * self.seq_len)

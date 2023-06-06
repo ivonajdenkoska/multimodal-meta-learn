@@ -83,13 +83,13 @@ def main_episodic():
                     drop_last=True)
 
     for epoch in range(args.epoch // 10000):
-        for step, (x_spt, y_spt, y_spt_mask, id_spt, x_qry, y_qry, y_qry_mask, id_qry) in enumerate(db):
-            x_spt, y_spt, y_spt_mask, id_spt, x_qry, y_qry, y_qry_mask, id_qry = x_spt.to(device), y_spt.to(device), \
+        for step, (x_spt, y_spt, y_spt_mask, id_spt, x_qry, y_qry, y_qry_mask, qry_img_id) in enumerate(db):
+            x_spt, y_spt, y_spt_mask, id_spt, x_qry, y_qry, y_qry_mask, qry_img_id = x_spt.to(device), y_spt.to(device), \
                                                                          y_spt_mask.to(device), id_spt, \
                                                                          x_qry.to(device), y_qry.to(device), \
-                                                                        y_qry_mask.to(device), id_qry
+                                                                        y_qry_mask.to(device), qry_img_id
 
-            accs, losses = meta(x_spt, y_spt, y_spt_mask, id_spt, x_qry, y_qry, y_qry_mask, id_qry)
+            accs, losses = meta(x_spt, y_spt, y_spt_mask, id_spt, x_qry, y_qry, y_qry_mask, qry_img_id)
 
             if step % 100 == 0:
                 print("------ Meta-training {}-way, {}-shot ({}-query) {}-mapper {}-prefix tokens------"
@@ -104,14 +104,16 @@ def main_episodic():
                 db_test = DataLoader(data_loader_test, batch_size=1, shuffle=True, num_workers=args.num_workers,
                                      pin_memory=True)
                 accs_all_test = []
-                for x_spt, y_spt, y_spt_mask, id_spt, x_qry, y_qry, y_qry_mask, id_qry in db_test:
-                    x_spt, y_spt, y_spt_mask, id_spt, x_qry, y_qry, y_qry_mask, id_qry = x_spt.squeeze(0).to(device), \
-                                                                                         y_spt.squeeze(0).to(device), \
-                                                                         y_spt_mask.squeeze(0).to(device), id_spt, \
-                                                                         x_qry.squeeze(0).to(device), y_qry.squeeze(0).to(device), \
-                                                                                                    y_qry_mask.squeeze(0).to(device), \
-                                                                                                    id_qry
-                    accs = meta.finetunning(x_spt, y_spt, y_spt_mask, id_spt, x_qry, y_qry, y_qry_mask, id_qry)
+                for x_spt, y_spt, y_spt_mask, x_qry, y_qry, y_qry_mask, y_qry_answer, qry_img_id in db_test:
+                    x_spt, y_spt, y_spt_mask, x_qry, y_qry, y_qry_mask, y_qry_answer, qry_img_id = x_spt.squeeze(0).to(device), \
+                                                                                                   y_spt.squeeze(0).to(device), \
+                                                                                                   y_spt_mask.squeeze(0).to(device), \
+                                                                                                   x_qry.to(device), \
+                                                                                                   y_qry.to(device), \
+                                                                                                   y_qry_mask.to(device), \
+                                                                                                   y_qry_answer.to(device), \
+                                                                                                   qry_img_id
+                    accs = meta.finetunning(x_spt, y_spt, y_spt_mask, x_qry, y_qry, y_qry_mask, y_qry_answer, qry_img_id)
                     accs_all_test.append(accs)
 
                 accs = np.array(accs_all_test).mean(axis=0).astype(np.float16)
